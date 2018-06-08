@@ -24,11 +24,11 @@ par = {
     'reset_weights'         : False, # reset weights between tasks
 
     # Task specs
-    'n_tasks'               : 100,
+    'n_tasks'               : 8,
 
-    'layer_dims'            : [28**2, 2000, 2000, 10], # mnist
+    'layer_dims'            : [28**2, 400, 400, 10], # mnist
     #'layer_dims'            : [4096, 1000, 1000, 5], #cifar
-    'gate_pct'              : 0.0, # percentage of hidden units to gate. Only used when gating_type is set to XdG
+    'gate_pct'              : 0.5, # percentage of hidden units to gate. Only used when gating_type is set to XdG
     'n_subnetworks'         : 5, # Only used when gating_type is set to split
     'multihead'             : False, # option for CIFAR task, in which different unique output units are asscoaited with each label
     'gate_cost'             : np.array([1.,0.1]),
@@ -40,7 +40,7 @@ par = {
 
     # Training specs
     'batch_size'            : 256,
-    'n_train_batches'       : 3906, # 3906*256 = 20 epochs * 50000
+    'n_train_batches'       : 2000, # 3906*256 = 20 epochs * 50000
     'n_batches_top_down'    : 20000,
 
     # Omega parameters
@@ -50,7 +50,7 @@ par = {
     'EWC_fisher_num_batches': 16, # was 16, number of batches size when calculating EWC
 
     # Type of gating signal
-    'gating_type'           : None, # can be either 'XdG', 'partial', 'split' or None
+    'gating_type'           : 'XdG', # can be either 'XdG', 'partial', 'split' or None
 
 }
 

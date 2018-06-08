@@ -100,6 +100,7 @@ class Model:
 
         # Use all trainable variables, except those in the convolutional layers
         self.variables = [var for var in tf.trainable_variables() if not var.op.name.find('conv')==0]
+        self.var_dict = {var.op.name : var for var in tf.trainable_variables() if not var.op.name.find('conv')==0}
         adam_optimizer = AdamOpt.AdamOpt(self.variables, learning_rate = par['learning_rate'])
 
         previous_weights_mu_minus_1 = {}
@@ -131,6 +132,9 @@ class Model:
             # Kirkpatrick method
             self.EWC()
 
+        # Analysis gradients
+        self.analysis_gradients()
+
         self.reset_prev_vars = tf.group(*reset_prev_vars_ops)
         self.reset_adam_op = adam_optimizer.reset_params()
 
@@ -138,6 +142,7 @@ class Model:
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         self.reset_weights()
+
 
     def reset_weights(self):
 
@@ -155,6 +160,27 @@ class Model:
                 reset_weights.append(tf.assign(var,new_weight))
 
         self.reset_weights = tf.group(*reset_weights)
+
+
+    def analysis_gradients(self):
+
+        opt = tf.train.GradientDescentOptimizer(1.)
+        epsilon = 1e-7
+
+        self.analysis_grads = {}
+        for n in range(par['layer_dims'][-1]):
+            gvs_n = opt.compute_gradients(tf.log(self.y[:,n:n+1]+epsilon))
+
+            for i in range(len(self.variables)):
+                var_name = gvs_n[i][1].op.name
+                if var_name in self.analysis_grads:
+                    self.analysis_grads[var_name] += [gvs_n[i][0]]
+                else:
+                    self.analysis_grads[var_name] = [gvs_n[i][0]]
+
+        for k in self.analysis_grads.keys():
+            self.analysis_grads[k] = tf.stack(self.analysis_grads[k], axis=-1)
+
 
     def EWC(self):
 
@@ -180,11 +206,12 @@ class Model:
 
         self.update_big_omega = tf.group(*fisher_ops)
 
+
     def pathint_stabilization(self, adam_optimizer, previous_weights_mu_minus_1):
         # Zenke method
 
         optimizer_task = tf.train.GradientDescentOptimizer(learning_rate =  1.0)
-        small_omega_var = {}
+        self.small_omega_var = {}
 
         reset_small_omega_ops = []
         update_small_omega_ops = []
@@ -193,9 +220,9 @@ class Model:
 
         for var in self.variables:
 
-            small_omega_var[var.op.name] = tf.Variable(tf.zeros(var.get_shape()), trainable=False)
-            reset_small_omega_ops.append( tf.assign( small_omega_var[var.op.name], small_omega_var[var.op.name]*0.0 ) )
-            update_big_omega_ops.append( tf.assign_add( self.big_omega_var[var.op.name], tf.div(tf.nn.relu(small_omega_var[var.op.name]), \
+            self.small_omega_var[var.op.name] = tf.Variable(tf.zeros(var.get_shape()), trainable=False)
+            reset_small_omega_ops.append( tf.assign( self.small_omega_var[var.op.name], self.small_omega_var[var.op.name]*0.0 ) )
+            update_big_omega_ops.append( tf.assign_add( self.big_omega_var[var.op.name], tf.div(tf.nn.relu(self.small_omega_var[var.op.name]), \
             	(par['omega_xi'] + tf.square(var-previous_weights_mu_minus_1[var.op.name])))))
 
 
@@ -210,7 +237,7 @@ class Model:
             self.delta_grads = adam_optimizer.return_delta_grads()
             self.gradients = optimizer_task.compute_gradients(self.task_loss)
             for grad,var in self.gradients:
-                update_small_omega_ops.append(tf.assign_add(small_omega_var[var.op.name], -self.delta_grads[var.op.name]*grad ) )
+                update_small_omega_ops.append(tf.assign_add(self.small_omega_var[var.op.name], -self.delta_grads[var.op.name]*grad ) )
             self.update_small_omega = tf.group(*update_small_omega_ops) # 1) update small_omega after each train!
 
 def main(save_fn, gpu_id = None):
@@ -269,7 +296,7 @@ def main(save_fn, gpu_id = None):
 
                 if par['stabilization'] == 'pathint':
 
-                    _, _, loss, AL = sess.run([model.train_op, model.update_small_omega, model.task_loss, model.aux_loss], \
+                    _, _, loss, AL, analysis_grads = sess.run([model.train_op, model.update_small_omega, model.task_loss, model.aux_loss, model.analysis_grads], \
                         feed_dict = {x:stim_in, y:y_hat, **gating_dict, mask:mk, droput_keep_pct:par['drop_keep_pct'], \
                         input_droput_keep_pct:par['input_drop_keep_pct']})
 
@@ -288,6 +315,15 @@ def main(save_fn, gpu_id = None):
                     stim_in, y_hat, mk = stim.make_batch(task, test = False)
                     big_omegas = sess.run([model.update_big_omega,model.big_omega_var], feed_dict = \
                         {x:stim_in, y:y_hat, **gating_dict, mask:mk, droput_keep_pct:1.0, input_droput_keep_pct:1.0})
+
+            # Record synaptic scalars prior to deletion
+            print('Saving variables and synaptic scalars.')
+            variables, omegas = sess.run([model.var_dict, model.small_omega_var])
+            for name in variables.keys():
+                savename = name.replace('/','')
+                np.save('./analysis/saves/var_t{}_{}'.format(task, savename), variables[name])
+                np.save('./analysis/saves/om_t{}_{}'.format(task, savename), omegas[name])
+                np.save('./analysis/saves/agr_t{}_{}'.format(task, savename), variables[name])
 
             # Reset the Adam Optimizer, and set the previous parater values to their current values
             sess.run(model.reset_adam_op)
@@ -321,3 +357,5 @@ def main(save_fn, gpu_id = None):
             pickle.dump(save_results, open(par['save_dir'] + save_fn, 'wb'))
 
     print('\nModel execution complete.')
+
+main('testing', None)
