@@ -5,6 +5,7 @@ import numpy as np
 import stimulus
 import AdamOpt
 from parameters import *
+import copy
 import os, time
 import pickle
 import convolutional_layers
@@ -222,9 +223,9 @@ class Model:
 
             self.small_omega_var[var.op.name] = tf.Variable(tf.zeros(var.get_shape()), trainable=False)
             reset_small_omega_ops.append( tf.assign( self.small_omega_var[var.op.name], self.small_omega_var[var.op.name]*0.0 ) )
-            update_big_omega_ops.append( tf.assign_add( self.big_omega_var[var.op.name], tf.div(tf.nn.relu(self.small_omega_var[var.op.name]), \
-            	(par['omega_xi'] + tf.square(var-previous_weights_mu_minus_1[var.op.name])))))
-
+            #update_big_omega_ops.append( tf.assign_add( self.big_omega_var[var.op.name], tf.div(tf.nn.relu(self.small_omega_var[var.op.name]), \
+            #	(par['omega_xi'] + tf.square(var-previous_weights_mu_minus_1[var.op.name])))))
+            update_big_omega_ops.append(tf.assign(self.big_omega_var[var.op.name], tf.ones_like(var)))
 
         # After each task is complete, call update_big_omega and reset_small_omega
         self.update_big_omega = tf.group(*update_big_omega_ops)
@@ -292,6 +293,7 @@ def main(save_fn, gpu_id = None, taskrange=range(0,1)):
 
             if task == 1:
                 print('Loading model from restore point.')
+                sess.run(model.update_big_omega)
                 saver.restore(sess, './savedir/baseline')
 
             # create dictionary of gating signals applied to each hidden layer for this task
@@ -328,12 +330,11 @@ def main(save_fn, gpu_id = None, taskrange=range(0,1)):
             print('Recording variables and synaptic scalars.')
             variables, omegas, prev_vars = sess.run([model.var_dict, model.small_omega_var, model.previous_weights_mu_minus_1])
 
-            task_record = {}
-            task_record['variables'] = variables
-            task_record['omegas'] = omegas
-            task_record['grads'] = analysis_grads
-            task_record['previous_variables'] = prev_vars
-            task_records.append(task_record)
+            task_records = {}
+            task_records['variables'] = variables
+            task_records['omegas'] = omegas
+            task_records['grads'] = analysis_grads
+            task_records['previous_variables'] = prev_vars
 
             # Reset the Adam Optimizer, and set the previous parater values to their current values
             sess.run(model.reset_adam_op)
@@ -363,10 +364,9 @@ def main(save_fn, gpu_id = None, taskrange=range(0,1)):
             if task == 0:
                 saver.save(sess, './savedir/baseline')
 
-
         if par['save_analysis']:
             save_results = {'task': task, 'accuracy': accuracy, 'accuracy_full': accuracy_full, \
-                            'accuracy_grid': accuracy_grid, 'big_omegas': big_omegas, 'par': par, 'task_records': task_records}
+                            'accuracy_grid': accuracy_grid, 'big_omegas': big_omegas, 'par': copy.deepcopy(par), 'task_records': task_records}
             #pickle.dump(save_results, open(par['save_dir'] + save_fn, 'wb'))
 
     print('\nModel execution complete.')

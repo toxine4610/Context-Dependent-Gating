@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import kurtosis
 import matplotlib.pyplot as plt
+import pickle
 import os, sys
 
 NUM_TASKS = 20
@@ -93,44 +94,52 @@ def mean_std(set, name, fn):
     plt.show()
 
 
+def histograms():
+    for fn in ['gated10', 'ungated10']:
+        variables, omegas = load_data(fn)
+        arrays = mean_setup(omegas)
+        for k in arrays.keys():
+            if not '2W' in k:
+                pass
+            else:
+                #print(k, arrays[k].shape)
+                data = np.transpose(np.array(arrays[k]),[1,0,2])
+                #print(data.shape)
+                #quit()
+                max = np.max(data)
+                bins = 30
+                binning = np.linspace(0,max,bins)
 
-for fn in ['gated10', 'ungated10']:
-    variables, omegas = load_data(fn)
-    arrays = mean_setup(omegas)
-    for k in arrays.keys():
-        if not '2W' in k:
-            pass
-        else:
-            #print(k, arrays[k].shape)
-            data = np.transpose(np.array(arrays[k]),[1,0,2])
-            #print(data.shape)
-            #quit()
-            max = np.max(data)
-            bins = 30
-            binning = np.linspace(0,max,bins)
-
-            for i in range(20):
-                fig, ax = plt.subplots(4,3, sharex=True, sharey=True, figsize=[10,8])
-                for j in range(10):
-                    ax[j%4,j//4].hist(data[i,j,:], bins=binning)
-                    ax[j%4,j//4].set_title('Synapse ({},{})'.format(i,j))
-                plt.savefig('./analysis/{}_synapse_hist{}.png'.format(fn, i))
-                plt.clf()
-
-
+                for i in range(20):
+                    fig, ax = plt.subplots(4,3, sharex=True, sharey=True, figsize=[10,8])
+                    for j in range(10):
+                        ax[j%4,j//4].hist(data[i,j,:], bins=binning)
+                        ax[j%4,j//4].set_title('Synapse ({},{})'.format(i,j))
+                    plt.savefig('./analysis/{}_synapse_hist{}.png'.format(fn, i))
+                    plt.clf()
 
 
+def unpack_pickle():
+    x = pickle.load(open('./savedir/mnist_csweep_testing.pkl', 'rb'))
+    v = 0
+    for c_id, c in enumerate(np.linspace(0, 0.5, 6)):
+        omega_c = x['c{}_v{}'.format(c_id, v)]['par']['omega_c']
+        accuracy = x['c{}_v{}'.format(c_id, v)]['accuracy'][-1]
+
+        print('c{}_v{}'.format(c_id, v), omega_c, accuracy)
+
+        var = x['c{}_v{}'.format(c_id, v)]['task_records']['variables']
+        prev_vars = x['c{}_v{}'.format(c_id, v)]['task_records']['previous_variables']
+        norms = {}
+        for k in var.keys():
+            norms[k] = np.square(var[k] - prev_vars[k])
+
+        plt.scatter(c, accuracy, label=c_id)
+
+    plt.legend()
+    plt.show()
 
 
 
 
-
-
-
-
-
-
-
-
-
-quit()
+unpack_pickle()
