@@ -122,17 +122,18 @@ def histograms():
 def unpack_pickle():
     x = pickle.load(open('./savedir/mnist_csweep_testing.pkl', 'rb'))
     v = 0
-    for c_id, c in enumerate(np.linspace(0, 0.5, 6)):
-        omega_c = x['c{}_v{}'.format(c_id, v)]['par']['omega_c']
-        accuracy = x['c{}_v{}'.format(c_id, v)]['accuracy'][-1]
+    for c_id, c in enumerate(np.linspace(0, 0.5, 5)):
+        key = 'c{}_v{}'.format(c_id, v)
+        omega_c = x[key]['par']['omega_c']
+        accuracy = x[key]['accuracy'][-1]
 
         print('c{}_v{}'.format(c_id, v), omega_c, accuracy)
 
-        var = x['c{}_v{}'.format(c_id, v)]['task_records']['variables']
-        prev_vars = x['c{}_v{}'.format(c_id, v)]['task_records']['previous_variables']
-        norms = {}
-        for k in var.keys():
-            norms[k] = np.square(var[k] - prev_vars[k])
+        print(x[key]['task_records'].keys())
+        quit()
+        for i, k in enumerate(x[key]['task_records']['norms'].keys()):
+            norms[k] = x[key]['task_records']['norms'][k]
+            print(i, norms[k].shape)
 
         plt.scatter(c, accuracy, label=c_id)
 

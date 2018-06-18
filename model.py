@@ -331,10 +331,15 @@ def main(save_fn, gpu_id = None, taskrange=range(0,1)):
             variables, omegas, prev_vars = sess.run([model.var_dict, model.small_omega_var, model.previous_weights_mu_minus_1])
 
             task_records = {}
-            task_records['variables'] = variables
-            task_records['omegas'] = omegas
-            task_records['grads'] = analysis_grads
-            task_records['previous_variables'] = prev_vars
+            #task_records['variables'] = variables
+            #task_records['omegas'] = omegas
+            #task_records['grads'] = analysis_grads
+            #task_records['previous_variables'] = prev_vars
+
+            norms = {}
+            for k in variables.keys():
+                norms[k] = np.square(variables[k] - prev_vars[k])
+            task_records['norms'] = norms
 
             # Reset the Adam Optimizer, and set the previous parater values to their current values
             sess.run(model.reset_adam_op)
@@ -365,8 +370,9 @@ def main(save_fn, gpu_id = None, taskrange=range(0,1)):
                 saver.save(sess, './savedir/baseline')
 
         if par['save_analysis']:
-            save_results = {'task': task, 'accuracy': accuracy, 'accuracy_full': accuracy_full, \
-                            'accuracy_grid': accuracy_grid, 'big_omegas': big_omegas, 'par': copy.deepcopy(par), 'task_records': task_records}
+            save_results = {'task': task, 'accuracy': accuracy, 'par': copy.deepcopy(par), 'task_records': task_records}
+            #save_results = {'task': task, 'accuracy': accuracy, 'accuracy_full': accuracy_full, \
+            #                'accuracy_grid': accuracy_grid, 'big_omegas': big_omegas, 'par': copy.deepcopy(par), 'task_records': task_records}
             #pickle.dump(save_results, open(par['save_dir'] + save_fn, 'wb'))
 
     print('\nModel execution complete.')

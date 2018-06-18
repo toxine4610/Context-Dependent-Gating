@@ -328,7 +328,7 @@ def run_csweep():
 
     results = {}
     for i in range(1):
-        for c_id, c in enumerate(np.linspace(0, 10, 11)):
+        for c_id, c in enumerate(np.linspace(0, 0.5, 5)):
             update_parameters({'omega_c' : c})
             save_fn = 'mnist_pathint_csweep.pkl'
             results['c{}_v{}'.format(c_id, i)] = try_model(save_fn, gpu_id, range(1,2))
