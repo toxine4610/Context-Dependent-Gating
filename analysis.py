@@ -120,7 +120,7 @@ def histograms():
 
 
 def unpack_pickle():
-    x = pickle.load(open('./savedir/mnist_csweep_testing.pkl', 'rb'))
+    x = pickle.load(open('./savedir/mnist_csweep2.pkl', 'rb'))
     v = 0
     for c_id, c in enumerate(np.linspace(0, 0.5, 5)):
         key = 'c{}_v{}'.format(c_id, v)
@@ -129,8 +129,7 @@ def unpack_pickle():
 
         print('c{}_v{}'.format(c_id, v), omega_c, accuracy)
 
-        print(x[key]['task_records'].keys())
-        quit()
+        norms = {}
         for i, k in enumerate(x[key]['task_records']['norms'].keys()):
             norms[k] = x[key]['task_records']['norms'][k]
             print(i, norms[k].shape)
