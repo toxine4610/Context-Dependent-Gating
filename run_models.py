@@ -9,7 +9,7 @@ def try_model(save_fn,gpu_id):
 
     try:
         # Run model
-        model.main(save_fn, gpu_id)
+        return model.main(save_fn, gpu_id)
     except KeyboardInterrupt:
         quit('Quit by KeyboardInterrupt')
 
@@ -24,6 +24,28 @@ mnist_updates = {
     'task'                  : 'mnist',
     'save_dir'              : './savedir/',
     'n_train_batches'       : 3906,
+    'drop_keep_pct'         : 0.5,
+    'input_drop_keep_pct'   : 1.0,
+    'multihead'             : False
+    }
+
+small_mnist_updates = {
+    'layer_dims'            : [784, 400, 400, 10],
+    'n_tasks'               : 3,
+    'task'                  : 'mnist',
+    'save_dir'              : './savedir/',
+    'n_train_batches'       : 100,
+    'drop_keep_pct'         : 0.5,
+    'input_drop_keep_pct'   : 1.0,
+    'multihead'             : False
+    }
+
+mnist_updates = {
+    'layer_dims'            : [784, 400, 400, 10],
+    'n_tasks'               : 12,
+    'task'                  : 'mnist',
+    'save_dir'              : './savedir/',
+    'n_train_batches'       : 2000,
     'drop_keep_pct'         : 0.5,
     'input_drop_keep_pct'   : 1.0,
     'multihead'             : False
@@ -287,6 +309,21 @@ def run_EWC():
             save_fn = 'imagenet_EWC_MH_omega' + str(j) + '_v' + str(i) + '.pkl'
             try_model(save_fn, gpu_id)
 
+
+def run_csweep():
+    update_parameters(small_mnist_updates)
+    update_parameters({'gating_type' : None, 'gate_pct' : 0.0, 'omega_c' : 0.1, 'omega_xi' : 0.01})
+
+    results = {}
+    for i in range(1):
+        for c_id, c in enumerate(np.linspace(0, 1, 2)):
+            update_parameters({'omega_c' : c})
+            save_fn = 'mnist_pathint_wo_gating_c{}_v{}.pkl'.format(c_id,i)
+            results['c{}_v{}'.format(c_id, i)] = try_model(save_fn, gpu_id)
+
+    pickle.dump(results, open(par['save_dir']+'mnist_csweep.pkl', 'wb'))
+
+
 # Second argument will select the GPU to use
 # Don't enter a second argument if you want TensorFlow to select the GPU/CPU
 try:
@@ -303,7 +340,7 @@ except:
 #recurse_best('/home/masse/Context-Dependent-Gating/savedir/ImageNet/', 'imagenet_SI_XdG')
 
 #run_EWC()
-run_base()
+#run_base()
 #run_SI()
 #run_split_EWC()
 #run_split_SI()
@@ -311,6 +348,7 @@ run_base()
 #run_XdG_SI()
 #run_partial_EWC()
 #run_XdG_EWC()
+run_csweep()
 
 quit()
 

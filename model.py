@@ -103,17 +103,17 @@ class Model:
         self.var_dict = {var.op.name : var for var in tf.trainable_variables() if not var.op.name.find('conv')==0}
         adam_optimizer = AdamOpt.AdamOpt(self.variables, learning_rate = par['learning_rate'])
 
-        previous_weights_mu_minus_1 = {}
+        self.previous_weights_mu_minus_1 = {}
         reset_prev_vars_ops = []
         self.big_omega_var = {}
         aux_losses = []
 
         for var in self.variables:
             self.big_omega_var[var.op.name] = tf.Variable(tf.zeros(var.get_shape()), trainable=False)
-            previous_weights_mu_minus_1[var.op.name] = tf.Variable(tf.zeros(var.get_shape()), trainable=False)
+            self.previous_weights_mu_minus_1[var.op.name] = tf.Variable(tf.zeros(var.get_shape()), trainable=False)
             aux_losses.append(par['omega_c']*tf.reduce_sum(tf.multiply(self.big_omega_var[var.op.name], \
-               tf.square(previous_weights_mu_minus_1[var.op.name] - var) )))
-            reset_prev_vars_ops.append( tf.assign(previous_weights_mu_minus_1[var.op.name], var ) )
+               tf.square(self.previous_weights_mu_minus_1[var.op.name] - var) )))
+            reset_prev_vars_ops.append( tf.assign(self.previous_weights_mu_minus_1[var.op.name], var ) )
 
         self.aux_loss = tf.add_n(aux_losses)
 
@@ -126,7 +126,7 @@ class Model:
 
         if par['stabilization'] == 'pathint':
             # Zenke method
-            self.pathint_stabilization(adam_optimizer, previous_weights_mu_minus_1)
+            self.pathint_stabilization(adam_optimizer, self.previous_weights_mu_minus_1)
 
         elif par['stabilization'] == 'EWC':
             # Kirkpatrick method
@@ -284,6 +284,7 @@ def main(save_fn, gpu_id = None):
         t_start = time.time()
         sess.run(model.reset_prev_vars)
 
+        task_records = []
         for task in range(par['n_tasks']):
 
             # create dictionary of gating signals applied to each hidden layer for this task
@@ -317,13 +318,16 @@ def main(save_fn, gpu_id = None):
                         {x:stim_in, y:y_hat, **gating_dict, mask:mk, droput_keep_pct:1.0, input_droput_keep_pct:1.0})
 
             # Record synaptic scalars prior to deletion
-            print('Saving variables and synaptic scalars.')
-            variables, omegas = sess.run([model.var_dict, model.small_omega_var])
-            for name in variables.keys():
-                savename = name.replace('/','')
-                np.save('./analysis/saves/var_t{}_{}'.format(task, savename), variables[name])
-                np.save('./analysis/saves/om_t{}_{}'.format(task, savename), omegas[name])
-                np.save('./analysis/saves/agr_t{}_{}'.format(task, savename), variables[name])
+            print('Recording variables and synaptic scalars.')
+            variables, omegas, prev_vars = sess.run([model.var_dict, model.small_omega_var, model.previous_weights_mu_minus_1])
+
+            task_record = {}
+            task_record['variables'] = variables
+            task_record['omegas'] = omegas
+            task_record['grads'] = analysis_grads
+            task_record['previous_variables'] = prev_vars
+            task_records.append(task_record)
+
 
             # Reset the Adam Optimizer, and set the previous parater values to their current values
             sess.run(model.reset_adam_op)
@@ -353,9 +357,10 @@ def main(save_fn, gpu_id = None):
 
         if par['save_analysis']:
             save_results = {'task': task, 'accuracy': accuracy, 'accuracy_full': accuracy_full, \
-                            'accuracy_grid': accuracy_grid, 'big_omegas': big_omegas, 'par': par}
-            pickle.dump(save_results, open(par['save_dir'] + save_fn, 'wb'))
+                            'accuracy_grid': accuracy_grid, 'big_omegas': big_omegas, 'par': par, 'task_records': task_records}
+            #pickle.dump(save_results, open(par['save_dir'] + save_fn, 'wb'))
 
     print('\nModel execution complete.')
+    return save_results
 
-main('testing', None)
+#main('testing', None)
