@@ -240,7 +240,7 @@ class Model:
                 update_small_omega_ops.append(tf.assign_add(self.small_omega_var[var.op.name], -self.delta_grads[var.op.name]*grad ) )
             self.update_small_omega = tf.group(*update_small_omega_ops) # 1) update small_omega after each train!
 
-def main(save_fn, gpu_id = None):
+def main(save_fn, gpu_id = None, taskrange):
 
     if gpu_id is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
@@ -282,10 +282,16 @@ def main(save_fn, gpu_id = None):
         init = tf.global_variables_initializer()
         sess.run(init)
         t_start = time.time()
+        sess.run(model.reset_adam_op)
         sess.run(model.reset_prev_vars)
 
+        saver = tf.train.Saver(tf.trainable_variables())
+
         task_records = []
-        for task in range(par['n_tasks']):
+        for task in taskrange: #par['n_tasks']):
+
+            if task == 1:
+                saver.restore(sess, './savedir/baseline')
 
             # create dictionary of gating signals applied to each hidden layer for this task
             gating_dict = {k:v for k,v in zip(gating, par['gating'][task])}
@@ -328,7 +334,6 @@ def main(save_fn, gpu_id = None):
             task_record['previous_variables'] = prev_vars
             task_records.append(task_record)
 
-
             # Reset the Adam Optimizer, and set the previous parater values to their current values
             sess.run(model.reset_adam_op)
             sess.run(model.reset_prev_vars)
@@ -353,6 +358,9 @@ def main(save_fn, gpu_id = None):
             # reset weights between tasks if called upon
             if par['reset_weights']:
                 sess.run(model.reset_weights)
+
+            if task == 0:
+                saver.save(sess, './savedir/baseline')
 
 
         if par['save_analysis']:

@@ -28,6 +28,17 @@ mnist_updates = {
     'multihead'             : False
     }
 
+csweep_mnist_updates = {
+    'layer_dims'            : [784, 2000, 2000, 10],
+    'n_tasks'               : 2,
+    'task'                  : 'mnist',
+    'save_dir'              : './savedir/',
+    'n_train_batches'       : 3906,
+    'drop_keep_pct'         : 0.5,
+    'input_drop_keep_pct'   : 1.0,
+    'multihead'             : False
+    }
+
 small_mnist_updates = {
     'layer_dims'            : [784, 400, 400, 10],
     'n_tasks'               : 3,
@@ -310,15 +321,17 @@ def run_EWC():
 
 
 def run_csweep():
-    update_parameters(small_mnist_updates)
-    update_parameters({'gating_type' : None, 'gate_pct' : 0.0, 'omega_c' : 0.1, 'omega_xi' : 0.01})
+    update_parameters(csweep_mnist_updates)
+    update_parameters({'gating_type' : None, 'gate_pct' : 0.0, 'omega_xi' : 0.01})
+
+    try_model(save_fn, gpu_id, range(0,1))
 
     results = {}
     for i in range(1):
-        for c_id, c in enumerate(np.linspace(0, 1, 2)):
+        for c_id, c in enumerate(np.linspace(0, 1, 20)):
             update_parameters({'omega_c' : c})
-            save_fn = 'mnist_pathint_wo_gating_c{}_v{}.pkl'.format(c_id,i)
-            results['c{}_v{}'.format(c_id, i)] = try_model(save_fn, gpu_id)
+            save_fn = 'mnist_pathint_csweep.pkl'
+            results['c{}_v{}'.format(c_id, i)] = try_model(save_fn, gpu_id, range(1,2))
 
     pickle.dump(results, open(par['save_dir']+'mnist_csweep.pkl', 'wb'))
 
