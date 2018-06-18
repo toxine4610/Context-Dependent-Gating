@@ -240,7 +240,7 @@ class Model:
                 update_small_omega_ops.append(tf.assign_add(self.small_omega_var[var.op.name], -self.delta_grads[var.op.name]*grad ) )
             self.update_small_omega = tf.group(*update_small_omega_ops) # 1) update small_omega after each train!
 
-def main(save_fn, gpu_id = None, taskrange):
+def main(save_fn, gpu_id = None, taskrange=range(0,1)):
 
     if gpu_id is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
@@ -291,6 +291,7 @@ def main(save_fn, gpu_id = None, taskrange):
         for task in taskrange: #par['n_tasks']):
 
             if task == 1:
+                print('Loading model from restore point.')
                 saver.restore(sess, './savedir/baseline')
 
             # create dictionary of gating signals applied to each hidden layer for this task

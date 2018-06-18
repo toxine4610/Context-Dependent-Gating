@@ -4,11 +4,11 @@ import model
 import sys, os
 import pickle
 
-def try_model(save_fn,gpu_id):
+def try_model(save_fn,gpu_id,taskrange):
 
     try:
         # Run model
-        return model.main(save_fn, gpu_id)
+        return model.main(save_fn, gpu_id, taskrange)
     except KeyboardInterrupt:
         quit('Quit by KeyboardInterrupt')
 
@@ -324,7 +324,7 @@ def run_csweep():
     update_parameters(csweep_mnist_updates)
     update_parameters({'gating_type' : None, 'gate_pct' : 0.0, 'omega_xi' : 0.01})
 
-    try_model(save_fn, gpu_id, range(0,1))
+    try_model('baseline_savefn', gpu_id, range(0,1))
 
     results = {}
     for i in range(1):
