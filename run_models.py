@@ -4,7 +4,6 @@ import model
 import sys, os
 import pickle
 
-
 def try_model(save_fn,gpu_id):
 
     try:
