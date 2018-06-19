@@ -119,27 +119,65 @@ def histograms():
                     plt.clf()
 
 
-def unpack_pickle():
-    x = pickle.load(open('./savedir/mnist_csweep2.pkl', 'rb'))
-    v = 0
-    for c_id, c in enumerate(np.linspace(0, 0.5, 5)):
-        key = 'c{}_v{}'.format(c_id, v)
-        omega_c = x[key]['par']['omega_c']
-        accuracy = x[key]['accuracy'][-1]
+def mnist_csweep_analysis():
+    fig, ax = plt.subplots(3,2, sharex=True, sharey=True, figsize=[10,8])
 
-        print('c{}_v{}'.format(c_id, v), omega_c, accuracy)
+    for g, n, col, counts in zip(['Gated', 'Ungated', 'Ungated (Small $c \\leq 0.02$)'], [3,4,5], ['r','g','b'], [11, 11, 11]):
+        x = pickle.load(open('./savedir/mnist_csweep{}.pkl'.format(n), 'rb'))
+        v = 0
 
-        norms = {}
-        for i, k in enumerate(x[key]['task_records']['norms'].keys()):
-            norms[k] = x[key]['task_records']['norms'][k]
-            print(i, norms[k].shape)
 
-        plt.scatter(c, accuracy, label=c_id)
+        for c_id, c in enumerate(np.linspace(0, 0.1, counts)):
+            key = 'c{}_v{}'.format(c_id, v)
+            omega_c = x[key]['par']['omega_c']
+            accuracy = x[key]['accuracy'][-1]
+
+            norms = {}
+            mean_norm = []
+            for i, k in enumerate(x[key]['task_records']['norms'].keys()):
+                norms[k] = x[key]['task_records']['norms'][k]
+                mean_norm.append(np.mean(x[key]['task_records']['norms'][k]))
+                #mean_norm = np.mean(mean_norm)
+
+                ax[i%3,i//3].scatter(np.mean(norms[k]), accuracy, c=col, s=5)
+                ax[i%3,i//3].set_title(k)
+
+            if c_id == 0:
+                ax[2,1].scatter(0,1, c=col, s=5, label=g)
+
+
+        # Repeats last point but adds label without duplication
+        #ax[0,0].scatter(mean_norm, accuracy, c=col, s=5, label=g)
+
+    ax[0,0].set_ylabel('Accuracy')
+    ax[1,0].set_ylabel('Accuracy')
+    ax[2,0].set_ylabel('Accuracy')
+    ax[2,0].set_xlabel('Mean Norm')
+    ax[2,1].set_xlabel('Mean Norm')
 
     plt.legend()
     plt.show()
 
 
+    """
+        ax[0].scatter(c, accuracy, label=c_id, c='b', s=5)
+        ax[1].scatter(c, mean_norm, label=c_id, c='g', s=5)
+
+    ax[0].set_title('Accuracies Across $c$')
+    ax[0].set_xlabel('$c$')
+    ax[0].set_ylabel('Accuracy')
+
+    ax[1].set_title('Mean Norms Across $c$')
+    ax[1].set_xlabel('$c$')
+    ax[1].set_ylabel('Average Norm')
+    ax[1].set_yscale('symlog')
+    ax[1].set_ylim(2e-5,3e-4)
+    ax[1].set_yticks([2e-5,5e-5,1e-4,2e-4,3e-4])
+
+    plt.grid(True)
+    plt.show()
+    """
 
 
-unpack_pickle()
+
+mnist_csweep_analysis()
