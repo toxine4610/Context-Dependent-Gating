@@ -1,4 +1,8 @@
+import tensorflow as tf
 import numpy as np
+
+np.random.seed(97813)
+
 from parameters import *
 import model
 import sys, os
@@ -324,12 +328,17 @@ def run_csweep():
     update_parameters(csweep_mnist_updates)
     update_parameters({'gating_type' : None, 'gate_pct' : 0.0, 'omega_xi' : 0.01})
 
+    gen_gating()
     try_model('baseline_savefn', gpu_id, range(0,1))
 
     results = {}
     for i in range(1):
         for c_id, c in enumerate(np.linspace(0, 0.002, 11)):
+
+            np.random.seed(97813)
             update_parameters({'omega_c' : c})
+            tf.set_random_seed(47789)
+
             save_fn = 'mnist_pathint_csweep.pkl'
             results['c{}_v{}'.format(c_id, i)] = try_model(save_fn, gpu_id, range(1,2))
 

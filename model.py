@@ -56,11 +56,11 @@ class Model:
             with tf.variable_scope('layer'+str(n)):
 
                 W = tf.get_variable('W', initializer = tf.random_uniform([par['layer_dims'][n],par['layer_dims'][n+1]], \
-                    -1.0/np.sqrt(par['layer_dims'][n]), 1.0/np.sqrt(par['layer_dims'][n])), trainable = True)
+                    -1.0/np.sqrt(par['layer_dims'][n]), 1.0/np.sqrt(par['layer_dims'][n]), seed=84501), trainable = True)
                 b = tf.get_variable('b', initializer = tf.zeros([1,par['layer_dims'][n+1]]), trainable = True if n<par['n_layers']-2 else False)
 
                 if n < par['n_layers']-2:
-                    self.x = tf.nn.dropout(tf.nn.relu(tf.matmul(self.x,W) + b), self.droput_keep_pct)
+                    self.x = tf.nn.dropout(tf.nn.relu(tf.matmul(self.x,W) + b), self.droput_keep_pct, seed=39893)
                     self.x = self.x*tf.tile(tf.reshape(self.gating[n],[1,par['layer_dims'][n+1]]),[par['batch_size'],1])
 
                 else:

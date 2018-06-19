@@ -99,7 +99,8 @@ def update_dependencies():
         par['labels_per_task'] = 10
     elif par['task'] == 'cifar':
         par['labels_per_task'] = 5
-    gen_gating()
+    #gen_gating()
+    #################################################################################################################################
 
 
 def update_parameters(updates):
