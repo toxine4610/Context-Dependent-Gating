@@ -33,7 +33,7 @@ csweep_mnist_updates = {
     'n_tasks'               : 2,
     'task'                  : 'mnist',
     'save_dir'              : './savedir/',
-    'n_train_batches'       : 5*3906,
+    'n_train_batches'       : 5000, #5*3906,
     'drop_keep_pct'         : 0.5,
     'input_drop_keep_pct'   : 1.0,
     'multihead'             : False
@@ -328,12 +328,12 @@ def run_csweep():
 
     results = {}
     for i in range(1):
-        for c_id, c in enumerate(np.linspace(0, 0.1, 41)):
+        for c_id, c in enumerate(np.linspace(0, 0.002, 11)):
             update_parameters({'omega_c' : c})
             save_fn = 'mnist_pathint_csweep.pkl'
             results['c{}_v{}'.format(c_id, i)] = try_model(save_fn, gpu_id, range(1,2))
 
-    pickle.dump(results, open(par['save_dir']+'mnist_csweep2.pkl', 'wb'))
+    pickle.dump(results, open(par['save_dir']+'mnist_csweep5.pkl', 'wb'))
 
 
 # Second argument will select the GPU to use
